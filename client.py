@@ -1,38 +1,37 @@
 import asyncio
 
-async def tcp_echo_client(message, loop):
-    reader, writer = await asyncio.open_connection('127.0.0.1', 5687,
-                                                   loop=loop)
-
-    print('Send: %r' % message)
-    writer.write(message.encode())
-
-    data = await reader.read(100)
-    print('Received: %r' % data.decode())
-
-    print('Close the socket')
-    writer.close()
-
-async def print_every_second(message, loop):
-    for i in range(5):
+async def check_request_from_server(message, loop):
+    while True:
         reader, writer = await asyncio.open_connection('127.0.0.1', 5687,
-                                                       loop=loop)
-        print('Send: %r' % message)
+                                                         loop=loop)
         writer.write(message.encode())
 
         data = await reader.read(100)
-        print('Received: %r' % data.decode())
+
+        data_dec = data.decode()
+        if data_dec == '1':
+            print('Send data immediately')
+            print('Received: %r' % data.decode())
+        await asyncio.sleep(3) # Will remove this
+
+async def send_data_each_five_mins(message, loop):
+    while True:
+        reader_, writer_ = await asyncio.open_connection('127.0.0.1', 5687,
+                                                         loop=loop)
+        print('Send: %r' % message)
+        writer_.write(message.encode())
 
         print('Close the socket')
-        writer.close()
+        writer_.close()
         await asyncio.sleep(3)
 
-message = 'Cho Nha~'
+message = 'Hello Cho Nha!'
 loop = asyncio.get_event_loop()
-#loop.run_until_complete(asyncio.gather(tcp_echo_client(message, loop),
-#                                       print_every_second())
-#)
-#loop.run_until_complete(tcp_echo_client(message, loop))
-loop.run_until_complete(print_every_second(message, loop))
+
+try:
+    loop.run_until_complete(asyncio.gather(check_request_from_server(message, loop),
+                                           send_data_each_five_mins(message, loop)))
+except KeyboardInterrupt:
+    pass
 
 loop.close()
