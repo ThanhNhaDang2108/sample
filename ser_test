@@ -1,0 +1,87 @@
+import socket, threading, time, json
+
+class socket_cl_ser(threading.Thread):
+    def __init__(self):
+        self.server = None
+        self.csocket = None
+        self.flag = 0
+        # self.print_lock = threading.Lock()
+        LOCALHOST = ""
+        PORT = 12345
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server.bind((LOCALHOST, PORT))
+        print("Server started")
+        print("Waiting for client request..")
+        self.start_server()
+    def handle_rec_data(self, clientAddress, rec_msg):
+        msg = ''
+        # while True:
+        data = rec_msg.recv(2048)
+        msg = data.decode()
+        print("msg", msg)
+        # if msg=='bye':
+        #     break
+        if len(msg) > 0:
+            self.flag = 1
+        self.append_to_json(msg, 'D:/DN/db_s.json')
+        print ("from client {}+++{}".format(msg, type(msg)))
+        
+        rec_msg.send(bytes(msg,'UTF-8'))
+        rec_msg.close()
+
+    def run_server(self):
+        # print("==============================================")
+        self.server.listen(1)
+        clientsock, clientAddress = self.server.accept()
+        # self.print_lock.acquire()
+        t = threading.Thread(target=self.handle_rec_data, args = (clientAddress, clientsock), name="handle_rec_data")
+        t.setDaemon(True)
+        t.start()
+        # self.handle_rec_data(clientAddress, clientsock)
+
+    def client_send_data(self, message):
+        print ("client_send_data")
+        # message = "Send from server to client"
+        host = '192.168.1.22'
+
+        # Define the port on which you want to connect 
+        port = 1234
+
+        s = socket.socket(socket.AF_INET,socket.SOCK_STREAM) 
+        s.connect((host,port))
+        s.send(str(message).encode('ascii'))
+        s.close()
+    def start_server(self):
+        r = threading.Thread(target=self.run_server, name="run_server")
+        r.setDaemon(True)
+        r.start()
+    def start_client(self, msg):
+        l = threading.Thread(target=self.client_send_data, name="client_send_data", args=(msg, ))
+        l.setDaemon(True)
+        l.start()
+
+    def append_to_json(self, _dict, path):
+        with open(path, 'ab+') as f:
+            f.seek(0,2)                                #Go to the end of file    
+            if f.tell() == 0 :                         #Check if file is empty
+                f.write(json.dumps(_dict).encode())  #If empty, write an array
+            else :
+                f.seek(0,2)           
+                f.truncate()                           #Remove the last character, open the array
+                f.write(' , '.encode())                #Write the separator
+                f.write(json.dumps(_dict).encode())    #Dump the dictionary
+                # f.write(']'.encode())                  #Close the array
+while True:
+    so = socket_cl_ser()
+    # so.start_server()
+    time.sleep(1)
+    # for i in range(0, 32):
+    #     time.sleep(0.5)
+    #     if i == 30:
+    #         so.flag = 1
+    # print ("start client send {}".format(so.flag))
+    if so.flag == 1:
+        print ("start client send {}".format(so.flag))
+        so.flag = 0
+        so.start_client("+++++++++++++++++++hello++++++++++++")
